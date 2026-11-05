@@ -1,0 +1,52 @@
+# MySQL 8 source -> replica replication lab (GTID-based).
+# Lab-only example passwords - local practice stack, not used anywhere real.
+services:
+  mysql-master:
+    image: mysql:8.0
+    container_name: mysql-master
+    command: >
+      --server-id=1
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+    environment:
+      MYSQL_ROOT_PASSWORD: example_root_pw
+    ports:
+      - "3307:3306"
+    volumes:
+      - master-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pexample_root_pw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mysql-replica:
+    image: mysql:8.0
+    container_name: mysql-replica
+    command: >
+      --server-id=2
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --log-bin=mysql-bin
+      --relay-log=relay-bin
+      --read-only=ON
+    environment:
+      MYSQL_ROOT_PASSWORD: example_root_pw
+    ports:
+      - "3308:3306"
+    volumes:
+      - replica-data:/var/lib/mysql
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pexample_root_pw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  master-data:
+  replica-data:
